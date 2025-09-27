@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Luxor Egyptian Sphere</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #000000;
+            color: #d4af37;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: none;
+        }
+        
+        .container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            border-bottom: 2px solid #d4af37;
+        }
+        
+        .osiris-text {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+            text-shadow: 0 0 15px rgba(212, 175, 55, 0.8);
+            color: #d4af37;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+        
+        .subtitle {
+            font-size: 0.9rem;
+            color: #b8860b;
+        }
+        
+        #canvas-container {
+            flex: 1;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 100;
+            border-top: 2px solid #d4af37;
+        }
+        
+        button {
+            background: linear-gradient(to bottom, #d4af37, #b8860b);
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: #0b0b2d;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-height: 44px;
+        }
+        
+        button:active {
+            transform: scale(0.95);
+            background: linear-gradient(to bottom, #b8860b, #996515);
+        }
+        
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #d4af37;
+            font-size: 1.2rem;
+            text-align: center;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .subject-text {
+            position: absolute;
+            color: #d4af37;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-shadow: 0 0 8px rgba(212, 175, 55, 0.8);
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.3s;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 6px 10px;
+            border-radius: 12px;
+            border: 1px solid #d4af37;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">Creating Egyptian Sphere...</div>
+
+    <div class="container">
+        <div class="header">
+            <div class="osiris-text">OSIRIS CONTACT LEARNING</div>
+            <h1>𓋹 Egyptian Knowledge Sphere 𓋹</h1>
+            <div class="subtitle">Rotate to explore ancient wisdom</div>
+        </div>
+        
+        <div id="canvas-container">
+            <div style="position: absolute; top: 20px; left: 0; width: 100%; text-align: center; z-index: 10; pointer-events: none;">
+                <div style="font-size: 2rem; font-weight: bold; color: #d4af37; text-shadow: 0 0 15px rgba(212, 175, 55, 0.8);">
+                    Osiris Contact Learning
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="rotate-toggle">⏸️ Pause Rotation</button>
+            <button id="subjects-toggle">📚 Show Labels</button>
+            <button id="reset-view">🔍 Reset View</button>
+        </div>
+    </div>
+
+    <!-- Load Three.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+
+    <script>
+        // Wait for the page to load
+        window.addEventListener('load', function() {
+            console.log('Page loaded, creating scene with corrected words...');
+            
+            // Check if Three.js is loaded
+            if (typeof THREE === 'undefined') {
+                document.getElementById('loading').innerHTML = 'Three.js failed to load. Please refresh.';
+                return;
+            }
+            
+            initScene();
+        });
+        
+        function createHieroglyphicTexture() {
+            const canvas = document.createElement('canvas');
+            const size = 1024;
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // Gold texture
+            const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+            gradient.addColorStop(0, '#fff9c4');
+            gradient.addColorStop(0.2, '#ffeb3b');
+            gradient.addColorStop(0.5, '#d4af37');
+            gradient.addColorStop(0.8, '#b8860b');
+            gradient.addColorStop(1, '#8b6914');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Hieroglyphics
+            const hieroglyphics = [
+                '𓂀', '𓆣', '𓂧', '𓋹', '𓏏', '𓎡', '𓍯', '𓊹', '𓎟', '𓂋',
+                '𓅓', '𓂝', '𓃭', '𓆑', '𓇋', '𓂞', '𓃒', '𓅂', '𓆈', '𓂁'
+            ];
+            
+            // Subject words to place on the sphere
+            const subjects = ['HISTORY', 'MATH', 'SCIENCE', 'ENGLISH', 'FRENCH', 'CHEMISTRY', 'PHYSICS'];
+            
+            // Draw hieroglyphics
+            const rows = 8;
+            const cols = 8;
+            const cellSize = size / cols;
+            
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    if (Math.random() > 0.3) {
+                        const symbol = hieroglyphics[Math.floor(Math.random() * hieroglyphics.length)];
+                        const x = col * cellSize + Math.random() * cellSize * 0.6;
+                        const y = row * cellSize + Math.random() * cellSize * 0.6;
+                        
+                        const opacity = 0.5 + Math.random() * 0.3;
+                        const fontSize = 60;
+                        
+                        ctx.fillStyle = `rgba(60, 30, 10, ${opacity})`;
+                        ctx.font = `bold ${fontSize}px Arial`;
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        
+                        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                        ctx.shadowBlur = 8;
+                        ctx.shadowOffsetX = 2;
+                        ctx.shadowOffsetY = 2;
+                        
+                        ctx.fillText(symbol, x + cellSize/2, y + cellSize/2);
+                    }
+                }
+            }
+            
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            
+            // Draw subject words on the sphere with proper backgrounds
+            const wordPositions = [
+                { word: 'HISTORY', x: size * 0.2, y: size * 0.3, size: 42 },
+                { word: 'MATH', x: size * 0.7, y: size * 0.25, size: 48 },
+                { word: 'SCIENCE', x: size * 0.15, y: size * 0.7, size: 38 },
+                { word: 'ENGLISH', x: size * 0.8, y: size * 0.65, size: 40 },
+                { word: 'FRENCH', x: size * 0.3, y: size * 0.15, size: 44 },
+                { word: 'CHEMISTRY', x: size * 0.65, y: size * 0.8, size: 36 },
+                { word: 'PHYSICS', x: size * 0.5, y: size * 0.5, size: 46 }
+            ];
+            
+            // First measure all text to ensure proper background sizes
+            wordPositions.forEach(pos => {
+                ctx.font = `bold ${pos.size}px Arial`;
+                const textMetrics = ctx.measureText(pos.word);
+                const textWidth = textMetrics.width;
+                const textHeight = pos.size;
+                
+                // Draw background with proper padding
+                const padding = 15;
+                const bgWidth = textWidth + padding * 2;
+                const bgHeight = textHeight + padding;
+                
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(
+                    pos.x - bgWidth/2, 
+                    pos.y - textHeight/2 - padding/2, 
+                    bgWidth, 
+                    bgHeight
+                );
+                
+                // Add border
+                ctx.strokeStyle = 'rgba(212, 175, 55, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(
+                    pos.x - bgWidth/2, 
+                    pos.y - textHeight/2 - padding/2, 
+                    bgWidth, 
+                    bgHeight
+                );
+            });
+            
+            // Now draw the text on top of the backgrounds
+            wordPositions.forEach(pos => {
+                // Draw the word
+                ctx.fillStyle = '#d4af37';
+                ctx.font = `bold ${pos.size}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Add glow effect to words
+                ctx.shadowColor = '#d4af37';
+                ctx.shadowBlur = 15;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+                
+                ctx.fillText(pos.word, pos.x, pos.y);
+            });
+            
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            
+            // Add some extra large hieroglyphics around the words
+            for (let i = 0; i < 12; i++) {
+                const symbol = hieroglyphics[Math.floor(Math.random() * hieroglyphics.length)];
+                const x = Math.random() * (size - 200) + 100;
+                const y = Math.random() * (size - 200) + 100;
+                
+                ctx.fillStyle = `rgba(80, 40, 10, 0.8)`;
+                ctx.font = `bold 100px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+                ctx.shadowBlur = 12;
+                ctx.shadowOffsetX = 3;
+                ctx.shadowOffsetY = 3;
+                
+                ctx.fillText(symbol, x, y);
+                
+                ctx.shadowColor = 'transparent';
+            }
+            
+            return new THREE.CanvasTexture(canvas);
+        }
+        
+        function initScene() {
+            console.log('Initializing scene with sphere positioned higher and zoomed out...');
+            
+            try {
+                // Scene with brighter night sky
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x223355);
+                
+                // Camera - ZOOMED OUT with wider FOV
+                const camera = new THREE.PerspectiveCamera(15, window.innerWidth / window.innerHeight, 0.1, 100);
+                camera.position.set(0, 2, 23); // Higher Y position and further back Z
+                
+                // Renderer
+                const renderer = new THREE.WebGLRenderer({ 
+                    antialias: true,
+                    powerPreference: "high-performance"
+                });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.toneMappingExposure = 1.2;
+                
+                const container = document.getElementById('canvas-container');
+                container.appendChild(renderer.domElement);
+                
+                // Controls with wider zoom range
+                const controls = new THREE.OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.enableZoom = true;
+                controls.enablePan = true;
+                controls.rotateSpeed = 0.5;
+                controls.minDistance = 8;  // Can zoom in closer
+                controls.maxDistance = 25; // Can zoom out further
+                
+                // Set initial target higher to match sphere position
+                controls.target.set(0, 1, 0);
+                
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x606080, 0.6);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xfffbe6, 1.2);
+                directionalLight.position.set(3, 5, 3);
+                scene.add(directionalLight);
+                
+                const fillLight = new THREE.DirectionalLight(0x606090, 0.4);
+                fillLight.position.set(-3, -2, -3);
+                scene.add(fillLight);
+                
+                const pointLight = new THREE.PointLight(0xfffbe6, 0.8, 20);
+                pointLight.position.set(2, 2, 2);
+                scene.add(pointLight);
+                
+                // Main sphere with corrected words - POSITIONED HIGHER
+                const material = new THREE.MeshStandardMaterial({
+                    map: createHieroglyphicTexture(),
+                    metalness: 0.4,
+                    roughness: 0.5,
+                    envMapIntensity: 0.2,
+                    emissive: 0x332211,
+                    emissiveIntensity: 0.2
+                });
+                
+                const geometry = new THREE.SphereGeometry(1.3, 64, 64);
+                const sphere = new THREE.Mesh(geometry, material);
+                sphere.position.y = 2.4; // MOVE SPHERE UP ON Y-AXIS
+                scene.add(sphere);
+                
+                // Subject positions in space - ADJUSTED FOR HIGHER SPHERE POSITION
+                const subjectPositions = [
+                    { name: 'HISTORY', position: new THREE.Vector3(-3, 3, -2) },
+                    { name: 'MATH', position: new THREE.Vector3(3, 2, -2) },
+                    { name: 'SCIENCE', position: new THREE.Vector3(-2, 0, 3) },
+                    { name: 'ENGLISH', position: new THREE.Vector3(2, 0, 2) },
+                    { name: 'FRENCH', position: new THREE.Vector3(-2, 3, 1) },
+                    { name: 'CHEMISTRY', position: new THREE.Vector3(2, 3, 1) },
+                    { name: 'PHYSICS', position: new THREE.Vector3(0, -1, -3) }
+                ];
+                
+                // Create DOM text labels for floating labels
+                const domLabels = {};
+                subjectPositions.forEach(subject => {
+                    const label = document.createElement('div');
+                    label.className = 'subject-text';
+                    label.textContent = subject.name;
+                    label.style.fontSize = '1rem';
+                    document.body.appendChild(label);
+                    domLabels[subject.name] = { label, position: subject.position };
+                });
+                
+                // Stars background
+                const starGeometry = new THREE.BufferGeometry();
+                const starCount = 1500;
+                const starPositions = new Float32Array(starCount * 3);
+                
+                for (let i = 0; i < starCount * 3; i += 3) {
+                    starPositions[i] = (Math.random() - 0.5) * 250; // Further stars for zoomed out view
+                    starPositions[i + 1] = (Math.random() - 0.5) * 250;
+                    starPositions[i + 2] = (Math.random() - 0.5) * 250;
+                }
+                
+                starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+                
+                const starMaterial = new THREE.PointsMaterial({
+                    size: 0.4, // Slightly larger stars for zoomed out view
+                    sizeAttenuation: true,
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const stars = new THREE.Points(starGeometry, starMaterial);
+                scene.add(stars);
+                
+                // Hide loading screen
+                document.getElementById('loading').style.display = 'none';
+                
+                // Store initial camera position for reset
+                const initialCameraPosition = camera.position.clone();
+                const initialControlsTarget = controls.target.clone();
+                
+                // Animation and state control
+                let rotating = true;
+                let showLabels = true;
+                
+                function animate() {
+                    requestAnimationFrame(animate);
+                    
+                    if (rotating) {
+                        sphere.rotation.y += 0.003;
+                    }
+                    
+                    // Update point light to follow camera
+                    pointLight.position.copy(camera.position);
+                    
+                    // Update DOM labels position with boundary checking
+                    if (showLabels) {
+                        subjectPositions.forEach(subject => {
+                            const label = domLabels[subject.name].label;
+                            const position = domLabels[subject.name].position;
+                            
+                            const vector = position.clone();
+                            vector.project(camera);
+                            
+                            const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                            const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
+                            
+                            // Check if label is within viewport bounds
+                            const isInView = vector.z < 1 && 
+                                           x > 50 && x < window.innerWidth - 50 && 
+                                           y > 50 && y < window.innerHeight - 50;
+                            
+                            if (isInView) {
+                                label.style.left = x + 'px';
+                                label.style.top = y + 'px';
+                                label.style.opacity = '1';
+                            } else {
+                                label.style.opacity = '0';
+                            }
+                        });
+                    } else {
+                        Object.values(domLabels).forEach(item => {
+                            item.label.style.opacity = '0';
+                        });
+                    }
+                    
+                    controls.update();
+                    renderer.render(scene, camera);
+                }
+                
+                animate();
+                
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+                
+                // UI Controls
+                document.getElementById('rotate-toggle').addEventListener('click', () => {
+                    rotating = !rotating;
+                    document.getElementById('rotate-toggle').textContent = 
+                        rotating ? '⏸️ Pause Rotation' : '▶️ Resume Rotation';
+                });
+                
+                document.getElementById('subjects-toggle').addEventListener('click', () => {
+                    showLabels = !showLabels;
+                    document.getElementById('subjects-toggle').textContent = 
+                        showLabels ? '📚 Hide Labels' : '📚 Show Labels';
+                });
+                
+                document.getElementById('reset-view').addEventListener('click', () => {
+                    camera.position.copy(initialCameraPosition);
+                    controls.target.copy(initialControlsTarget);
+                    controls.update();
+                });
+                
+                console.log('Scene with higher sphere position and zoomed out view initialized!');
+                
+            } catch (error) {
+                console.error('Error initializing scene:', error);
+                document.getElementById('loading').innerHTML = 
+                    'Error creating 3D scene: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
